@@ -1,0 +1,59 @@
+#!/bin/bash -ex
+
+# WebCalendar aka k5nCal TKLPatch v0.1 by JedMeister (Jeremy Davis)
+# To be applied to TKL LAMP v11.x (tested on v11.1)
+#
+
+install()
+{
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get -y \
+        -o DPkg::Options::=--force-confdef \
+        -o DPkg::Options::=--force-confold \
+        install $@
+}
+
+HOSTNAME=webcalendar
+
+# set hostname
+echo "$HOSTNAME" > /etc/hostname
+sed -i "s|127.0.1.1 \(.*\)|127.0.1.1 $HOSTNAME|" /etc/hosts
+
+# install
+install php5-gd
+
+# download, untar and rename WebCalendar (and cleanup after)
+cd /var/www
+wget http://sourceforge.net/projects/webcalendar/files/webcalendar%201.2/1.2.4/WebCalendar-1.2.4.tar.gz
+tar xvfz WebCalendar-1.2.4.tar.gz
+mv WebCalendar-1.2.4 webcalendar
+rm WebCalendar-1.2.4.tar.gz
+
+# overwrite default concrete5 config file
+mv settings.php /var/www/webcalendar/includes/
+
+# disable default apache sites and enable webcal standalone
+a2dissite default
+#a2dissite default-ssl
+a2ensite webcal-standalone
+
+# set up database and cleanup after
+service mysql start
+cd /var/www
+mysqladmin -u root create webcal
+mysql -u root webcal<webcal-usr.sql
+mysql -u root webcal<webcal.sql
+rm webcal-usr.sql webcal.sql
+
+# change ownership on folder - This has been commented out so WebCal can't be hacked
+#cd /var/www/webcalendar
+#chown -R www-data:www-data includes/
+
+# shutdown services so patch finishes cleanly
+service apache2 stop
+service mysql stop
+
+# cleanup
+apt-get clean
+
+# end

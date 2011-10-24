@@ -1,0 +1,1 @@
+GRANT ALL PRIVILEGES ON webcal.* TO 'webcal-usr'@localhost IDENTIFIED BY 'random-password';
